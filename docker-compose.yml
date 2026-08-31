@@ -1,0 +1,19 @@
+services:
+  tiny:
+    build: .
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    environment:
+      TINY_CLI_PROVIDER: ${TINY_CLI_PROVIDER:-}
+      TINY_CLI_MODEL: ${TINY_CLI_MODEL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      TINY_CLI_API_KEY: ${TINY_CLI_API_KEY:-}
+    volumes:
+      - .:/workspace
+    network_mode: "none"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
