@@ -12,6 +12,9 @@ def main() -> int:
     parser.add_argument("--model", help="override configured model")
     args = parser.parse_args()
 
-    provider = resolve_provider(args.provider, args.model)
+    try:
+        provider = resolve_provider(args.provider, args.model)
+    except RuntimeError:
+        provider = None
     run(provider)
     return 0
