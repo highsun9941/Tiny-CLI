@@ -55,7 +55,8 @@
 - [x] Implement `/help`, `/models`, `/use <provider> [model]`, and `/quit`.
 - [x] Allow the TUI to start even when no provider is configured so users can inspect help/configuration instead of crashing before the UI renders.
 - [x] Add dedicated configuration tests covering CLI entrypoint parsing and no-provider startup behavior.
-- [ ] Verify package import and CLI smoke command with the project dev environment.
+- [x] Compile the current package sources successfully with Python 3.13 in a dependency-free syntax check.
+- [ ] Verify package import and `tiny --help` through a fully installed project environment with Textual/httpx available.
 
 ### Task 3: Docker distribution and provider examples
 
@@ -70,7 +71,8 @@
 - [x] Drop all Linux capabilities and enable `no-new-privileges` in the example Compose profile while keeping provider network access available for the remote model API.
 - [x] Document OpenAI, OpenRouter, and generic OpenAI-compatible provider configuration without hardcoding vendor behavior into the agent.
 - [x] Document the no-guardrail warning and recommend container/OS-level isolation for autonomous execution.
-- [ ] Verify that package metadata, console entrypoint, Dockerfile, Compose environment names, and documented paths are internally consistent.
+- [x] Verify package metadata, console entrypoint, Dockerfile, Compose environment names, and documented paths with a static consistency check.
+- [ ] Build and run the Docker image in an environment with Docker available.
 
 ### Task 4: Repository verification and alignment
 
@@ -80,4 +82,5 @@
 
 - [x] Add CI covering editable install, Python compilation, pytest, and `python -m tiny_cli --help`.
 - [x] Keep this plan synchronized with the actual repository file layout and current implementation.
-- [ ] Confirm the latest `main` commit has a successful GitHub Actions run before declaring the repository verified.
+- [x] Run the repository's tool/provider tests from a reconstructed snapshot of the current committed source: 3 tests passed; Python compilation passed.
+- [ ] Confirm the latest `main` commit has a successful GitHub Actions run before declaring the repository fully verified.
