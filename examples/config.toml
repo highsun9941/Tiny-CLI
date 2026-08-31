@@ -1,0 +1,22 @@
+# Copy to ~/.config/tiny-cli/config.toml
+# Provider entries are plain OpenAI-compatible Chat Completions endpoints.
+# Add as many providers/models as you like without changing Tiny-CLI code.
+
+[providers.openrouter]
+name = "OpenRouter"
+base_url = "https://openrouter.ai/api/v1"
+api_key_env = "OPENROUTER_API_KEY"
+model = "openai/gpt-5"
+
+[providers.openai]
+name = "OpenAI"
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+model = "gpt-5"
+
+# Example custom provider:
+# [providers.my-local-or-cloud-provider]
+# name = "My Provider"
+# base_url = "https://example.com/v1"
+# api_key_env = "MY_PROVIDER_API_KEY"
+# model = "my-model"
