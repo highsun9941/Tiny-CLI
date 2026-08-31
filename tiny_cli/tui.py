@@ -6,7 +6,7 @@ from textual.widgets import Footer, Header, Input, Static
 from textual.worker import work
 
 from .agent import Agent, AgentEvent
-from .providers import ProviderConfig, load_providers
+from .providers import ProviderConfig, load_providers, resolve_provider
 
 CSS = """
 Screen { background: #0b0d10; color: #e6e8eb; }
@@ -82,17 +82,29 @@ class TinyApp(App[None]):
         self.run_agent(prompt)
 
     def _command(self, prompt: str) -> None:
-        command, _, _arg = prompt.partition(" ")
+        command, _, arg = prompt.partition(" ")
         if command in {"/q", "/quit", "/exit"}:
             self.exit()
         elif command == "/help":
-            self._add("assistant", "/help   /models   /quit\n\nProvider config: ~/.config/tiny-cli/config.toml")
+            self._add("assistant", "/help   /models   /use <provider> [model]   /quit\n\nProvider config: ~/.config/tiny-cli/config.toml")
         elif command == "/models":
             providers = load_providers()
             if not providers:
                 self._add("assistant", "No providers configured.")
             else:
                 self._add("assistant", "\n".join(f"{key} · {p.name} · {p.model}" for key, p in sorted(providers.items())))
+        elif command == "/use":
+            name, _, model = arg.strip().partition(" ")
+            if not name:
+                self._add("error", "Usage: /use <provider> [model]")
+                return
+            try:
+                self.provider = resolve_provider(name, model or None)
+                self.agent = Agent(self.provider, self._event)
+                self.query_one("#status", Static).update(f"{self.provider.name} · {self.provider.model}")
+                self._add("assistant", f"Switched to {self.provider.name} · {self.provider.model}")
+            except Exception as exc:
+                self._add("error", f"{type(exc).__name__}: {exc}")
         else:
             self._add("error", f"Unknown command: {command}")
 
@@ -100,7 +112,7 @@ class TinyApp(App[None]):
     def run_agent(self, prompt: str) -> None:
         if not self.agent:
             return
-        self._add("tool", "working…")
+        self.call_from_thread(self._add, "tool", "working…")
         try:
             self.agent.ask(prompt)
         except Exception as exc:
