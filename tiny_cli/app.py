@@ -14,7 +14,10 @@ def main() -> int:
 
     try:
         provider = resolve_provider(args.provider, args.model)
-    except RuntimeError:
-        provider = None
+    except RuntimeError as exc:
+        if str(exc).startswith("No provider configured"):
+            provider = None
+        else:
+            raise
     run(provider)
     return 0
