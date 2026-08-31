@@ -3,11 +3,10 @@ from __future__ import annotations
 from textual.app import App, ComposeResult
 from textual.containers import Container, VerticalScroll
 from textual.widgets import Footer, Header, Input, Static
-from textual.worker import Worker
+from textual.worker import work
 
 from .agent import Agent, AgentEvent
 from .providers import ProviderConfig, load_providers
-
 
 CSS = """
 Screen { background: #0b0d10; color: #e6e8eb; }
@@ -15,11 +14,10 @@ Header { background: #11151a; color: #e6e8eb; }
 #chat { height: 1fr; padding: 1 2; scrollbar-size: 1 1; }
 #composer { height: auto; border: round #303842; padding: 0 1; margin: 0 2 1 2; }
 #status { height: 1; color: #8f99a6; padding: 0 2; }
-.user { color: #d7e3ff; padding: 1 0 0 0; }
+.user { color: #9fc3ff; padding: 1 0 0 0; }
 .assistant { color: #f0f2f5; padding: 1 0 0 0; }
 .tool { color: #8f99a6; padding: 0 0 0 2; }
 .error { color: #ff8b8b; }
-
 Input { border: none; background: transparent; }
 """
 
@@ -46,16 +44,15 @@ class TinyApp(App[None]):
         if self.provider:
             status.update(f"{self.provider.name} · {self.provider.model}")
             self.agent = Agent(self.provider, self._event)
-            self._add("assistant", "Tiny-CLI ready. The runtime has no planner, subagents, or permission heuristics.")
+            self._add("assistant", "Tiny-CLI ready. No planner, subagents, memory, or permission heuristics.")
         else:
             status.update("No provider configured")
             self._add("error", "No provider configured. Add ~/.config/tiny-cli/config.toml or set an API key environment variable.")
-            self._add("assistant", "Run /help for commands. Providers are configured without changing Tiny-CLI code.")
+            self._add("assistant", "Run /help for commands.")
 
     def _add(self, kind: str, text: str) -> None:
         chat = self.query_one("#chat", VerticalScroll)
-        cls = kind
-        chat.mount(Static(text, classes=cls))
+        chat.mount(Static(text, classes=kind))
         chat.scroll_end(animate=False)
 
     def _event(self, event: AgentEvent) -> None:
@@ -85,11 +82,11 @@ class TinyApp(App[None]):
         self.run_agent(prompt)
 
     def _command(self, prompt: str) -> None:
-        command, _, arg = prompt.partition(" ")
+        command, _, _arg = prompt.partition(" ")
         if command in {"/q", "/quit", "/exit"}:
             self.exit()
         elif command == "/help":
-            self._add("assistant", "/help  /models  /quit\n\nProvider config: ~/.config/tiny-cli/config.toml")
+            self._add("assistant", "/help   /models   /quit\n\nProvider config: ~/.config/tiny-cli/config.toml")
         elif command == "/models":
             providers = load_providers()
             if not providers:
@@ -99,14 +96,15 @@ class TinyApp(App[None]):
         else:
             self._add("error", f"Unknown command: {command}")
 
-    async def run_agent(self, prompt: str) -> None:
+    @work(thread=True, exclusive="agent")
+    def run_agent(self, prompt: str) -> None:
         if not self.agent:
             return
         self._add("tool", "working…")
         try:
-            await self.agent.ask(prompt)  # type: ignore[misc]
+            self.agent.ask(prompt)
         except Exception as exc:
-            self._add("error", f"{type(exc).__name__}: {exc}")
+            self.call_from_thread(self._add, "error", f"{type(exc).__name__}: {exc}")
 
 
 def run(provider: ProviderConfig | None = None) -> None:
