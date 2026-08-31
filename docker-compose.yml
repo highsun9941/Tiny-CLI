@@ -12,7 +12,6 @@ services:
       TINY_CLI_API_KEY: ${TINY_CLI_API_KEY:-}
     volumes:
       - .:/workspace
-    network_mode: "none"
     cap_drop:
       - ALL
     security_opt:
