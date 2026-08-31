@@ -54,7 +54,7 @@
 - [x] Show the current provider/model in the status bar.
 - [x] Implement `/help`, `/models`, `/use <provider> [model]`, and `/quit`.
 - [x] Allow the TUI to start even when no provider is configured so users can inspect help/configuration instead of crashing before the UI renders.
-- [ ] Add dedicated configuration tests covering CLI entrypoint parsing and no-provider startup behavior.
+- [x] Add dedicated configuration tests covering CLI entrypoint parsing and no-provider startup behavior.
 - [ ] Verify package import and CLI smoke command with the project dev environment.
 
 ### Task 3: Docker distribution and provider examples
