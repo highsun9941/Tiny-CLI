@@ -1,1 +1,2 @@
-openai>=1.0.0
+httpx>=0.27,<1
+textual>=0.89,<1
