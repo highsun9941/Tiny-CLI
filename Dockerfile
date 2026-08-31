@@ -3,11 +3,9 @@ FROM python:3.12-slim
 WORKDIR /workspace
 
 RUN useradd --create-home --uid 10001 tiny
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt && rm /tmp/requirements.txt
-
-COPY tiny_cli.py /usr/local/bin/tiny-cli
-RUN chmod +x /usr/local/bin/tiny-cli
+COPY pyproject.toml README.md /tmp/
+COPY tiny_cli /tmp/tiny_cli
+RUN pip install --no-cache-dir /tmp && rm -rf /tmp/pyproject.toml /tmp/README.md /tmp/tiny_cli
 
 USER tiny
-ENTRYPOINT ["tiny-cli"]
+ENTRYPOINT ["tiny"]
