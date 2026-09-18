@@ -12,14 +12,44 @@ CC Switch처럼 여러 API 제공자를 프로필로 등록하고 필요할 때 
 
 ## 설치
 
-Python 3.12 이상이 필요합니다. 현재 저장소의 코드를 설치하려면:
+Linux, macOS, WSL에서는 한 줄로 설치할 수 있습니다.
 
 ```bash
-pipx install 'git+https://github.com/highsun9941/Tiny-CLI.git'
+curl -fsSL https://raw.githubusercontent.com/highsun9941/Tiny-CLI/main/install.sh | bash
+```
+
+설치 스크립트가 필요한 경우 [uv](https://docs.astral.sh/uv/)와 Python 3.12를 준비하고, 이 저장소의 `main` 코드를 독립된 Python 환경에 설치합니다. Python이나 Git을 미리 설치할 필요가 없고 `sudo`도 사용하지 않습니다. 설치 후 `tiny`를 실행하세요. `~/.local/bin`이 PATH에 없으면 설치 완료 메시지에 나온 설정을 적용합니다.
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
 tiny
 ```
 
-또는 소스에서 설치합니다.
+같은 설치 명령을 다시 실행하면 업데이트됩니다. 기본 설치 경로는 `~/.local/share/tiny-cli`, 실행 명령은 `~/.local/bin/tiny`입니다. 제공자 설정과 셸 설정 파일은 자동으로 바꾸지 않습니다. 기존의 다른 `tiny` 명령과 충돌하면 설치를 중단하고 안내합니다.
+
+스크립트를 먼저 확인하거나 특정 태그·커밋을 설치하려면:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/highsun9941/Tiny-CLI/main/install.sh -o install.sh
+less install.sh
+bash install.sh --help
+# 기본 main 대신 원하는 Git ref를 지정할 수 있습니다.
+bash install.sh --ref main
+```
+
+설치 위치는 `TINY_CLI_INSTALL_DIR`, 실행 명령 위치는 `TINY_CLI_BIN_DIR`로 지정할 수 있습니다. 두 경로는 절대 경로여야 하며 재설치할 때도 같은 값을 사용하세요. Git ref는 `TINY_CLI_REF`로도 지정할 수 있습니다. 파이프 명령에서 환경변수는 `bash` 쪽에 전달합니다.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/highsun9941/Tiny-CLI/main/install.sh | TINY_CLI_REF=main bash
+```
+
+Python 3.12 이상과 pipx가 이미 있다면 직접 설치할 수도 있습니다.
+
+```bash
+pipx install 'git+https://github.com/highsun9941/Tiny-CLI.git'
+```
+
+개발용 소스 설치:
 
 ```bash
 git clone https://github.com/highsun9941/Tiny-CLI.git
@@ -30,7 +60,7 @@ pip install -e .
 tiny
 ```
 
-실행한 디렉터리가 작업 디렉터리입니다. `python -m tiny_cli`도 같은 UI를 실행합니다. 패키지 이름이 겹칠 수 있으므로, 이 프로젝트를 설치할 때는 위 저장소 주소나 소스 경로를 사용하세요.
+실행한 디렉터리가 작업 디렉터리입니다. 소스 설치 환경에서는 `python -m tiny_cli`도 같은 UI를 실행합니다. 패키지 이름이 겹칠 수 있으므로, 이 프로젝트를 설치할 때는 위 설치 스크립트나 저장소 주소·소스 경로를 사용하세요.
 
 ## 기본 동작
 
