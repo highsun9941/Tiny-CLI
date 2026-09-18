@@ -1,4 +1,5 @@
 import json
+import shlex
 import sys
 from types import ModuleType
 
@@ -23,7 +24,7 @@ def client_for(replies, requests):
 PROVIDER = ProviderConfig("test", "https://provider.test/v1", "", "test-model")
 
 
-def test_default_request_has_only_user_history_and_four_tools(tmp_path, monkeypatch):
+def test_default_request_has_only_user_history_and_shell_tool(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "AGENTS.md").write_text("INSTRUCTIONS THAT MUST NOT BE INJECTED")
     requests = []
@@ -32,20 +33,18 @@ def test_default_request_has_only_user_history_and_four_tools(tmp_path, monkeypa
         assert agent.messages == []
         agent.ask("hello")
     assert requests[0]["messages"] == [{"role": "user", "content": "hello"}]
-    assert {tool["function"]["name"] for tool in requests[0]["tools"]} == {
-        "read_file", "write_file", "replace_in_file", "run_command",
-    }
+    assert [tool["function"]["name"] for tool in requests[0]["tools"]] == ["run_command"]
     assert agent.plugins == []
 
 
-def test_multiple_tools_execute_and_full_results_return_to_model(tmp_path, monkeypatch):
+def test_multiple_shell_calls_execute_and_full_results_return_to_model(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     requests, events = [], []
     text = "x" * 2000
     replies = [
         {"role": "assistant", "content": None, "tool_calls": [
-            call("write_file", json.dumps({"path": "a.txt", "content": text})),
-            call("read_file", '{"path":"a.txt"}', "call_2"),
+            call("run_command", json.dumps({"command": f"printf %s {shlex.quote(text)} > a.txt"})),
+            call("run_command", '{"command":"cat a.txt"}', "call_2"),
         ]},
         {"role": "assistant", "content": "done"},
     ]
@@ -54,13 +53,13 @@ def test_multiple_tools_execute_and_full_results_return_to_model(tmp_path, monke
     assert (tmp_path / "a.txt").read_text() == text
     results = requests[1]["messages"][2:]
     assert [m["tool_call_id"] for m in results] == ["call_1", "call_2"]
-    assert results[1]["content"] == text
+    assert results[1]["content"] == "exit_code=0\n" + text
     assert "_is_error" not in results[0]
     assert events[-1].kind == "turn_end"
 
 
 @pytest.mark.parametrize("name,arguments", [
-    ("read_file", "{"), ("read_file", "[]"), ("read_file", "{}"), ("unknown", "{}"),
+    ("run_command", "{"), ("run_command", "[]"), ("run_command", "{}"), ("read_file", "{}"),
 ])
 def test_bad_tool_calls_return_errors_without_breaking_history(name, arguments):
     requests = []
@@ -98,8 +97,8 @@ def test_plugins_are_explicit_and_do_not_leak_between_agents(monkeypatch):
         extended = Agent(PROVIDER, plugins=["test_optional_plugin:setup"] * 2, client=client)
         extended.ask("test")
         assert len(loads) == 1
-        assert len(bare.tools) == 4 and bare.messages == []
-        assert len(extended.tools) == 5
+        assert len(bare.tools) == 1 and bare.messages == []
+        assert len(extended.tools) == 2
     assert requests[0]["messages"][0]["content"] == "opt-in context"
     assert requests[1]["messages"][-1]["content"] == "hello"
     assert events[-1].kind == "turn_end"
