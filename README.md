@@ -200,6 +200,51 @@ TINY_UID="$(id -u)" TINY_GID="$(id -g)" docker compose run --rm --build tiny
 
 Docker는 실행 환경을 분리하지만, 쓰기 가능하게 마운트한 파일과 전달한 키에는 여전히 접근할 수 있습니다. 작업용 디렉터리와 필요한 키만 전달하세요. 컨테이너 안의 `localhost`는 컨테이너 자신을 가리키므로, 호스트의 로컬 모델 서버를 쓸 때는 환경에 맞는 호스트 주소를 설정해야 합니다.
 
+## 저장소 구조
+
+현재 저장소에서 실행·설치·설정·검증에 사용하는 파일과 각 역할입니다.
+
+```text
+Tiny-CLI/
+├── tiny_cli/                  # CLI 실행 코어
+│   ├── __init__.py            # 패키지 버전
+│   ├── __main__.py            # python -m tiny_cli 실행 진입점
+│   ├── app.py                 # CLI 옵션 처리, 설정 로딩, UI 시작
+│   ├── tui.py                 # 터미널 UI, 사용자 명령, 제공자·세션 전환
+│   ├── agent.py               # 모델 요청 → 도구 실행 → 결과 전달 반복
+│   ├── tools.py               # 유일한 기본 도구 run_command 정의와 실행
+│   ├── providers.py           # TOML·환경변수에서 API 제공자와 모델 선택
+│   ├── transport.py           # OpenAI 호환·Anthropic API 요청과 응답 변환
+│   └── plugins.py             # 명시적으로 선택한 module:setup 플러그인 로딩
+├── examples/                  # 사용자가 적용할 수 있는 설정·플러그인 예제
+│   ├── config.toml            # API 제공자 프로필과 플러그인 설정 예제
+│   └── plugins/
+│       └── session_log.py     # 완료된 대화를 JSONL로 저장하는 선택형 플러그인
+├── docs/
+│   └── plugins.md             # 플러그인 작성법, 확장 API, 실행 예제
+├── tests/                     # 실제 API 키 없이 실행하는 자동 테스트
+│   ├── conftest.py            # 테스트를 개인 설정·인증 환경변수에서 격리
+│   ├── test_agent.py          # 모델·도구 반복, 오류 반환, 플러그인 선택 검증
+│   ├── test_tools.py          # 셸 파일 작업, 종료 코드·출력, 제거된 도구 검증
+│   ├── test_transport.py      # OpenAI·Anthropic 요청과 도구 호출 왕복 검증
+│   ├── test_providers.py      # 제공자 설정, 선택 우선순위, 인증 설정 검증
+│   ├── test_config.py         # CLI 옵션과 설정·플러그인 선택 전달 검증
+│   ├── test_tui.py            # UI의 제공자·세션 전환과 중복 요청 처리 검증
+│   └── test_installer.py      # 설치·재설치, uv 준비, 설치 실패 처리 검증
+├── .github/workflows/
+│   └── ci.yml                 # 테스트와 Linux·macOS 설치·재설치 CI
+├── install.sh                 # curl 설치 진입점, uv·Python 준비와 설치·업데이트
+├── pyproject.toml             # 패키지 정보, 의존성, tiny 명령 등록
+├── tiny_cli.py                # python tiny_cli.py 실행을 위한 호환 진입점
+├── Dockerfile                 # Python·Git·ripgrep을 포함한 실행 이미지
+├── docker-compose.yml         # 작업 디렉터리·환경변수를 연결하는 컨테이너 설정
+├── .dockerignore              # Docker 빌드 컨텍스트에서 제외할 파일
+├── .gitignore                 # Git에서 제외할 가상환경·캐시·로컬 환경 파일
+└── README.md                  # 프로젝트 방향, 설치법, 사용법, 저장소 구조
+```
+
+`tiny`와 `python -m tiny_cli`는 모두 `app.py`의 `main()`으로 진입합니다. `tui.py`가 사용자 입력을 받아 `agent.py`에 전달하고, 에이전트는 `transport.py`로 모델과 통신하며 `tools.py`로 셸 명령을 실행합니다. `examples/`의 설정과 플러그인은 사용자가 직접 지정해 사용할 수 있습니다.
+
 ## 개발 및 검증
 
 ```bash
