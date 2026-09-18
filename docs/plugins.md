@@ -1,6 +1,6 @@
 # Community plugins
 
-Tiny-CLI supplies four tools and an in-process conversation by default. No plugin,
+Tiny-CLI supplies one shell tool (`run_command`) and an in-process conversation by default. No plugin,
 prompt, memory file, skill, or context policy is loaded implicitly. The following
 small Python API is experimental; community distribution and compatibility
 conventions are still planned.
@@ -43,8 +43,8 @@ def setup(agent):
 ```
 
 Handlers receive keyword arguments and must return a string. Exceptions are
-returned to the model as tool errors. Tool names must be unique; built-in tools
-cannot be accidentally replaced through `add_tool`.
+returned to the model as tool errors. Tool names must be unique; the built-in
+`run_command` cannot be accidentally replaced through `add_tool`.
 
 ## Context and events
 

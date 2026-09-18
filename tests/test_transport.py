@@ -11,9 +11,9 @@ def test_anthropic_round_trip_preserves_blocks_and_groups_tool_results(tmp_path,
     monkeypatch.setenv("TEST_ANTHROPIC_KEY", "test-key")
     native_blocks = [
         {"type": "thinking", "thinking": "test", "signature": "opaque-signature"},
-        {"type": "text", "text": "Reading files."},
-        {"type": "tool_use", "id": "a", "name": "write_file", "input": {"path": "a.txt", "content": "hello"}},
-        {"type": "tool_use", "id": "b", "name": "read_file", "input": {"path": "missing.txt"}},
+        {"type": "text", "text": "Running commands."},
+        {"type": "tool_use", "id": "a", "name": "run_command", "input": {"command": "printf hello > a.txt"}},
+        {"type": "tool_use", "id": "b", "name": "run_command", "input": {}},
     ]
     replies = [{"content": native_blocks}, {"content": [{"type": "text", "text": "done"}]}]
     requests = []
@@ -29,7 +29,7 @@ def test_anthropic_round_trip_preserves_blocks_and_groups_tool_results(tmp_path,
         Agent(provider, client=client).ask("test")
     assert "system" not in requests[0]
     assert requests[0]["max_tokens"] == 1234
-    assert len(requests[0]["tools"]) == 4
+    assert [tool["name"] for tool in requests[0]["tools"]] == ["run_command"]
     assert "input_schema" in requests[0]["tools"][0]
     assert requests[1]["messages"][1] == {"role": "assistant", "content": native_blocks}
     results = requests[1]["messages"][2]
