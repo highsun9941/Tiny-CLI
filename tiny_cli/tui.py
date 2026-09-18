@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+from rich.text import Text
+from textual import work
 from textual.app import App, ComposeResult
 from textual.containers import Container, VerticalScroll
 from textual.widgets import Footer, Header, Input, Static
-from textual.worker import work
 
 from .agent import Agent, AgentEvent
 from .providers import ProviderConfig, load_providers, resolve_provider
@@ -27,10 +30,19 @@ class TinyApp(App[None]):
     SUB_TITLE = "The model decides. The runtime executes."
     CSS = CSS
 
-    def __init__(self, provider: ProviderConfig | None = None) -> None:
+    def __init__(
+        self,
+        provider: ProviderConfig | None = None,
+        *,
+        config_path: Path | None = None,
+        plugins: list[str] | None = None,
+    ) -> None:
         super().__init__()
         self.provider = provider
         self.agent: Agent | None = None
+        self.config_path = config_path
+        self.plugins = list(plugins or [])
+        self.busy = False
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -42,21 +54,40 @@ class TinyApp(App[None]):
     def on_mount(self) -> None:
         status = self.query_one("#status", Static)
         if self.provider:
-            status.update(f"{self.provider.name} · {self.provider.model}")
-            self.agent = Agent(self.provider, self._event)
-            self._add("assistant", "Tiny-CLI ready. No planner, subagents, memory, or permission heuristics.")
+            self._activate(self.provider)
+            if self.agent:
+                self._add("assistant", "Tiny-CLI ready. Use /help for commands.")
         else:
             status.update("No provider configured")
             self._add("error", "No provider configured. Add ~/.config/tiny-cli/config.toml or set an API key environment variable.")
             self._add("assistant", "Run /help for commands.")
+        self._add("tool", "Shell commands and file writes run without approval. Docker is recommended.")
+
+    def _activate(self, provider: ProviderConfig) -> bool:
+        try:
+            agent = Agent(provider, self._event, plugins=self.plugins)
+        except Exception as exc:
+            self._add("error", f"{type(exc).__name__}: {exc}")
+            return False
+        if self.agent:
+            self.agent.close()
+        self.provider = provider
+        self.agent = agent
+        self.query_one("#status", Static).update(Text(f"{provider.name} · {provider.model} · plugins: {len(agent.plugins)}"))
+        return True
+
+    def on_unmount(self) -> None:
+        if self.agent and not self.busy:
+            self.agent.close()
 
     def _add(self, kind: str, text: str) -> None:
         chat = self.query_one("#chat", VerticalScroll)
-        chat.mount(Static(text, classes=kind))
+        chat.mount(Static(Text(text), classes=kind))
         chat.scroll_end(animate=False)
 
     def _event(self, event: AgentEvent) -> None:
-        self.call_from_thread(self._handle_event, event)
+        if self.is_running:
+            self.call_from_thread(self._handle_event, event)
 
     def _handle_event(self, event: AgentEvent) -> None:
         if event.kind == "assistant":
@@ -69,9 +100,12 @@ class TinyApp(App[None]):
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         prompt = event.value.strip()
-        event.input.value = ""
         if not prompt:
             return
+        if self.busy and not prompt.startswith("/"):
+            self._add("error", "A task is still running. Wait before sending another request.")
+            return
+        event.input.value = ""
         self._add("user", f"> {prompt}")
         if prompt.startswith("/"):
             self._command(prompt)
@@ -79,45 +113,65 @@ class TinyApp(App[None]):
         if not self.agent:
             self._add("error", "No provider configured.")
             return
-        self.run_agent(prompt)
+        self.busy = True
+        self.run_agent(self.agent, prompt)
 
     def _command(self, prompt: str) -> None:
         command, _, arg = prompt.partition(" ")
+        if self.busy and command in {"/use", "/clear"}:
+            self._add("error", "A task is still running. Wait before changing the session.")
+            return
         if command in {"/q", "/quit", "/exit"}:
             self.exit()
         elif command == "/help":
-            self._add("assistant", "/help   /models   /use <provider> [model]   /quit\n\nProvider config: ~/.config/tiny-cli/config.toml")
-        elif command == "/models":
-            providers = load_providers()
+            self._add("assistant", "/help   /providers (/models)   /use <provider> [model]   /plugins   /clear   /quit\n\n/use and /clear start a fresh session. Plugins run only when explicitly enabled.")
+        elif command in {"/providers", "/models"}:
+            try:
+                providers = load_providers(self.config_path)
+            except Exception as exc:
+                self._add("error", f"{type(exc).__name__}: {exc}")
+                return
             if not providers:
                 self._add("assistant", "No providers configured.")
             else:
-                self._add("assistant", "\n".join(f"{key} · {p.name} · {p.model}" for key, p in sorted(providers.items())))
+                self._add("assistant", "\n".join(f"{key} · {p.name} · {p.model} · {p.api_format}" for key, p in sorted(providers.items())))
+        elif command == "/plugins":
+            active = self.agent.plugins if self.agent else []
+            self._add("assistant", "\n".join(active) if active else "No active plugins.")
+        elif command == "/clear":
+            if self.provider and self._activate(self.provider):
+                self._add("assistant", "Started a fresh session.")
         elif command == "/use":
             name, _, model = arg.strip().partition(" ")
             if not name:
                 self._add("error", "Usage: /use <provider> [model]")
                 return
             try:
-                self.provider = resolve_provider(name, model or None)
-                self.agent = Agent(self.provider, self._event)
-                self.query_one("#status", Static).update(f"{self.provider.name} · {self.provider.model}")
-                self._add("assistant", f"Switched to {self.provider.name} · {self.provider.model}")
+                provider = resolve_provider(name, model.strip() or None, self.config_path)
+                if self._activate(provider):
+                    self._add("assistant", f"Switched to {provider.name} · {provider.model}. Started a fresh session.")
             except Exception as exc:
                 self._add("error", f"{type(exc).__name__}: {exc}")
         else:
             self._add("error", f"Unknown command: {command}")
 
-    @work(thread=True, exclusive="agent")
-    def run_agent(self, prompt: str) -> None:
-        if not self.agent:
-            return
-        self.call_from_thread(self._add, "tool", "working…")
+    @work(thread=True, group="agent")
+    def run_agent(self, agent: Agent, prompt: str) -> None:
         try:
-            self.agent.ask(prompt)
+            self.call_from_thread(self._add, "tool", "working…")
+            agent.ask(prompt)
         except Exception as exc:
-            self.call_from_thread(self._add, "error", f"{type(exc).__name__}: {exc}")
+            if self.is_running:
+                self.call_from_thread(self._add, "error", f"{type(exc).__name__}: {exc}")
+        finally:
+            if self.is_running:
+                self.call_from_thread(self._finished)
+            else:
+                agent.close()
+
+    def _finished(self) -> None:
+        self.busy = False
 
 
-def run(provider: ProviderConfig | None = None) -> None:
-    TinyApp(provider).run()
+def run(provider: ProviderConfig | None = None, *, config_path: Path | None = None, plugins: list[str] | None = None) -> None:
+    TinyApp(provider, config_path=config_path, plugins=plugins).run()

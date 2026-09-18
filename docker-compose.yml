@@ -2,11 +2,14 @@ services:
   tiny:
     build: .
     working_dir: /workspace
+    # Set TINY_UID / TINY_GID to your host IDs when using a writable bind mount.
+    user: "${TINY_UID:-10001}:${TINY_GID:-10001}"
     stdin_open: true
     tty: true
     environment:
       TINY_CLI_PROVIDER: ${TINY_CLI_PROVIDER:-}
       TINY_CLI_MODEL: ${TINY_CLI_MODEL:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       TINY_CLI_API_KEY: ${TINY_CLI_API_KEY:-}

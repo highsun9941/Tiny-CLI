@@ -1,6 +1,11 @@
 # Copy to ~/.config/tiny-cli/config.toml
-# Provider entries are plain OpenAI-compatible Chat Completions endpoints.
-# Add as many providers/models as you like without changing Tiny-CLI code.
+# Or pass: tiny --config /path/to/config.toml
+# Profile keys are selected with --provider or /use.
+default_provider = "openrouter"
+
+[plugins]
+# Installed Python module:setup callables. Empty means the bare core.
+enabled = []
 
 [providers.openrouter]
 name = "OpenRouter"
@@ -14,9 +19,25 @@ base_url = "https://api.openai.com/v1"
 api_key_env = "OPENAI_API_KEY"
 model = "gpt-5"
 
-# Example custom provider:
+# Native Anthropic Messages (set a model ID supported by your account):
+# [providers.anthropic]
+# name = "Anthropic"
+# api_format = "anthropic"
+# base_url = "https://api.anthropic.com/v1"
+# api_key_env = "ANTHROPIC_API_KEY"
+# model = "your-claude-model"
+# max_tokens = 4096
+
+# Example custom OpenAI-compatible provider:
 # [providers.my-local-or-cloud-provider]
 # name = "My Provider"
 # base_url = "https://example.com/v1"
 # api_key_env = "MY_PROVIDER_API_KEY"
 # model = "my-model"
+
+# A local server without authentication:
+# [providers.local]
+# name = "Local"
+# base_url = "http://localhost:1234/v1"
+# api_key_env = ""
+# model = "your-local-model"
