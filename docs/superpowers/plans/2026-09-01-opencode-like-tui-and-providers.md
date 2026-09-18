@@ -1,5 +1,8 @@
 # OpenCode-like TUI and Provider Layer Implementation Plan
 
+> Historical implementation plan for v0.2. The current behavior and opt-in plugin
+> interface are documented in README.md and docs/plugins.md.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Turn Tiny-CLI into an installable terminal application with an OpenCode-like TUI while keeping the agent loop policy-light, and make arbitrary OpenAI-compatible providers easy to configure without changing agent code.
