@@ -1,9 +1,12 @@
+# 실행 이미지에 필요 없는 Git 정보·가상환경·테스트 및 Python 캐시를 빌드 전송에서 제외한다.
 .git
 .venv
 .pytest_cache
 __pycache__
 *.py[cod]
+# 로컬 키·환경 설정이 이미지 빌드 컨텍스트에 들어가지 않게 한다.
 .env
 .env.*
+# 로컬 빌드 산출물 대신 Dockerfile이 복사한 소스로 패키지를 설치한다.
 dist
 build

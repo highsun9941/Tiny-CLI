@@ -15,12 +15,14 @@ CC Switch처럼 여러 API 제공자를 프로필로 등록하고 필요할 때 
 Linux, macOS, WSL에서는 한 줄로 설치할 수 있습니다.
 
 ```bash
+# 이 저장소의 설치 스크립트로 전용 Python 환경과 tiny 실행 명령을 준비한다.
 curl -fsSL https://raw.githubusercontent.com/highsun9941/Tiny-CLI/main/install.sh | bash
 ```
 
 설치 스크립트가 필요한 경우 [uv](https://docs.astral.sh/uv/)와 Python 3.12를 준비하고, 이 저장소의 `main` 코드를 독립된 Python 환경에 설치합니다. Python이나 Git을 미리 설치할 필요가 없고 `sudo`도 사용하지 않습니다. 설치 후 `tiny`를 실행하세요. `~/.local/bin`이 PATH에 없으면 설치 완료 메시지에 나온 설정을 적용합니다.
 
 ```bash
+# 사용자 영역에 설치한 명령을 현재 셸에서 찾을 수 있게 한다.
 export PATH="$HOME/.local/bin:$PATH"
 tiny
 ```
@@ -30,6 +32,7 @@ tiny
 스크립트를 먼저 확인하거나 특정 태그·커밋을 설치하려면:
 
 ```bash
+# 스크립트를 파일로 받아 설치 동작과 지원 옵션을 먼저 검토한다.
 curl -fsSL https://raw.githubusercontent.com/highsun9941/Tiny-CLI/main/install.sh -o install.sh
 less install.sh
 bash install.sh --help
@@ -40,20 +43,24 @@ bash install.sh --ref main
 설치 위치는 `TINY_CLI_INSTALL_DIR`, 실행 명령 위치는 `TINY_CLI_BIN_DIR`로 지정할 수 있습니다. 두 경로는 절대 경로여야 하며 재설치할 때도 같은 값을 사용하세요. Git ref는 `TINY_CLI_REF`로도 지정할 수 있습니다. 파이프 명령에서 환경변수는 `bash` 쪽에 전달합니다.
 
 ```bash
+# 파이프 오른쪽의 bash가 읽도록 ref 환경변수를 지정한다.
 curl -fsSL https://raw.githubusercontent.com/highsun9941/Tiny-CLI/main/install.sh | TINY_CLI_REF=main bash
 ```
 
 Python 3.12 이상과 pipx가 이미 있다면 직접 설치할 수도 있습니다.
 
 ```bash
+# 동명의 PyPI 패키지 대신 저장소 소스를 pipx의 격리된 환경에 설치한다.
 pipx install 'git+https://github.com/highsun9941/Tiny-CLI.git'
 ```
 
 개발용 소스 설치:
 
 ```bash
+# 로컬 수정이 실행에 반영되는 개발 환경을 준비한다.
 git clone https://github.com/highsun9941/Tiny-CLI.git
 cd Tiny-CLI
+# 시스템 Python 패키지와 분리한 뒤 editable 설치로 소스 변경을 바로 사용한다.
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
@@ -86,30 +93,36 @@ tiny
 `~/.config/tiny-cli/config.toml`에 프로필을 등록합니다. 다른 파일은 `--config` 또는 `TINY_CLI_CONFIG`로 지정할 수 있습니다.
 
 ```toml
+# CLI나 환경변수로 다른 제공자를 선택하지 않았을 때 사용할 프로필이다.
 default_provider = "openrouter"
 
 [plugins]
+# 기본 코어만 사용한다. 선택형 확장은 module:setup 형태로 직접 추가한다.
 enabled = []
 
 [providers.openrouter]
+# name은 화면 표시용, base_url은 전송 계층이 API 경로를 붙일 루트 주소다.
 name = "OpenRouter"
 base_url = "https://openrouter.ai/api/v1"
+# 키 자체를 저장하지 않고 이 환경변수에서 요청 시 읽는다.
 api_key_env = "OPENROUTER_API_KEY"
 model = "openai/gpt-5"
 
 [providers.deepseek]
+# 같은 OpenAI 호환 전송을 주소와 모델 설정만 바꿔 사용할 수 있다.
 name = "DeepSeek"
 base_url = "https://api.deepseek.com/v1"
 api_key_env = "DEEPSEEK_API_KEY"
 model = "deepseek-chat"
 
 [providers.anthropic]
+# 이 프로필은 요청·응답을 Anthropic Messages 형식으로 변환한다.
 name = "Anthropic"
 api_format = "anthropic"
 base_url = "https://api.anthropic.com/v1"
 api_key_env = "ANTHROPIC_API_KEY"
 model = "your-claude-model" # 계정에서 사용할 모델 ID로 변경
-max_tokens = 4096
+max_tokens = 4096 # 한 응답의 최대 출력 토큰 수
 
 [providers.local]
 name = "Local"
@@ -121,8 +134,10 @@ model = "your-local-model" # 서버에 로드한 모델 ID로 변경
 `api_format = "openai"`가 기본값이며, OpenAI 호환 **Chat Completions** API와 도구 호출을 지원하는 서버에 연결합니다. `anthropic`은 기본 **Messages** API 형식을 사용합니다. `base_url`에는 API 루트 경로를 넣으세요. 런타임이 각각 `/chat/completions`, `/messages`를 붙입니다. `max_tokens`는 Anthropic 요청의 최대 출력 토큰 수입니다.
 
 ```bash
+# 프로필이 참조하는 키를 현재 셸에 설정하고 사용할 제공자를 선택한다.
 export OPENROUTER_API_KEY=...
 tiny --provider openrouter
+# 다른 설정 파일과 모델 재정의는 이번 실행에만 적용된다.
 tiny --config /path/to/config.toml --provider anthropic --model YOUR_MODEL_ID
 ```
 
@@ -149,11 +164,14 @@ UI 명령:
 
 ```toml
 [plugins]
+# 설치된 모듈의 setup 함수를 새 Agent 초기화 시 호출한다.
 enabled = ["my_plugin:setup"]
 ```
 
 ```bash
+# 설정 목록 뒤에 플러그인 하나를 추가한다.
 tiny --plugin my_plugin:setup
+# 설정 파일과 CLI에서 선택한 플러그인을 모두 끄는 별도의 실행 예제다.
 tiny --no-plugins
 ```
 
@@ -166,7 +184,9 @@ tiny --no-plugins
 ## Docker에서 실행하기
 
 ```bash
+# Python·Git·ripgrep과 CLI를 포함한 이미지를 만든다.
 docker build -t tiny-cli .
+# 호스트 UID/GID로 파일 소유권을 맞추고 작업 디렉터리·필요한 환경변수를 연결한다.
 docker run --rm -it \
   --user "$(id -u):$(id -g)" \
   --cap-drop ALL --security-opt no-new-privileges \
@@ -182,6 +202,7 @@ Linux에서 `--user`에 호스트 UID/GID를 지정하면 마운트한 작업 �
 설정 파일과 사용자 정의 제공자를 쓰려면:
 
 ```bash
+# 설정 파일은 읽기 전용으로 연결하고 컨테이너 안 경로를 CLI에 알려 준다.
 docker run --rm -it \
   --user "$(id -u):$(id -g)" \
   --cap-drop ALL --security-opt no-new-privileges \
@@ -195,6 +216,7 @@ docker run --rm -it \
 Compose의 기본 작업 경로는 이 저장소입니다.
 
 ```bash
+# Compose에서도 호스트 파일 소유권을 맞추며 현재 소스로 이미지를 다시 빌드한다.
 TINY_UID="$(id -u)" TINY_GID="$(id -g)" docker compose run --rm --build tiny
 ```
 
@@ -248,6 +270,7 @@ Tiny-CLI/
 ## 개발 및 검증
 
 ```bash
+# 테스트 도구를 포함해 설치하고 Python 문법·자동 테스트·CLI 진입점을 차례로 확인한다.
 pip install -e '.[dev]'
 python -m compileall -q tiny_cli
 pytest -q
