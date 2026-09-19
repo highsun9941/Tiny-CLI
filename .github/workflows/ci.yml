@@ -1,6 +1,8 @@
+# 코드 변경을 검증하고 실제 배포 방식인 설치 스크립트까지 두 운영체제에서 실행한다.
 name: CI
 
 on:
+  # 병합 전 PR과 병합 후 main 양쪽을 확인한다.
   push:
     branches: [main]
   pull_request:
@@ -12,9 +14,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
+          # 패키지의 최소 지원 버전에서 실행돼야 더 높은 버전에만 우연히 의존하지 않는다.
           python-version: "3.12"
       - run: python -m pip install --upgrade pip
+      # 저장소 코드와 테스트용 의존성을 설치한다.
       - run: python -m pip install -e '.[dev]'
+      # Python·Bash 문법, 자동 테스트, CLI 진입점을 각각 확인한다.
       - run: python -m compileall -q tiny_cli
       - run: bash -n install.sh
       - run: pytest -q
@@ -23,19 +28,23 @@ jobs:
   installer:
     strategy:
       matrix:
+        # Linux뿐 아니라 macOS 기본 셸 환경에서도 설치가 되는지 검증한다.
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - name: Install and reinstall the current commit
         env:
+          # 실행기 전역 도구와 섞이지 않도록 이번 작업의 임시 디렉터리에 설치한다.
           TINY_CLI_INSTALL_DIR: ${{ runner.temp }}/tiny-runtime
           TINY_CLI_BIN_DIR: ${{ runner.temp }}/tiny-bin
+          # PR에서는 실제 변경 커밋을 설치해 main의 이전 코드가 검증되는 일을 피한다.
           TINY_CLI_REF: ${{ github.event.pull_request.head.sha || github.sha }}
         shell: bash
         run: |
-          # Exercise the uv bootstrap without tools installed by runner extras.
+          # 실행기에 미리 설치된 uv·Python에 기대지 않도록 최소 PATH에서 설치를 시작한다.
           PATH=/usr/bin:/bin:/usr/sbin:/sbin bash install.sh
           "$TINY_CLI_BIN_DIR/tiny" --help
+          # 같은 경로에 다시 설치해 업데이트 경로와 실행 명령도 확인한다.
           PATH=/usr/bin:/bin:/usr/sbin:/sbin bash install.sh
           "$TINY_CLI_BIN_DIR/tiny" --help

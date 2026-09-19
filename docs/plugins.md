@@ -11,6 +11,7 @@ Install your package into the same Python environment as Tiny-CLI, then opt in:
 
 ```toml
 [plugins]
+# 같은 Python 환경에 설치된 진입점만 명시하며, 이 순서대로 setup을 실행한다.
 enabled = ["my_package:setup", "another_package:setup"]
 ```
 
@@ -24,12 +25,14 @@ Each entry names an importable module and a callable accepting one `Agent`:
 
 ```python
 def setup(agent):
+    # 새 세션에서 한 번 실행된다. 모델에 보낼 스키마와 로컬 실행 함수를 함께 등록한다.
     agent.add_tool(
         {
             "type": "function",
             "function": {
                 "name": "echo",
                 "description": "Return the supplied text.",
+                # 모델이 text 문자열 하나를 인자로 보내도록 호출 형식을 설명한다.
                 "parameters": {
                     "type": "object",
                     "properties": {"text": {"type": "string"}},
@@ -38,6 +41,7 @@ def setup(agent):
                 },
             },
         },
+        # 모델이 보낸 text를 키워드 인자로 받아 도구 결과 문자열로 반환한다.
         lambda text: text,
     )
 ```
@@ -93,6 +97,7 @@ Avoid retaining long-lived external resources that require one.
 From a source checkout with Tiny-CLI installed:
 
 ```bash
+# 예제 모듈을 import할 경로를 이번 실행에만 추가하고 로그 플러그인을 명시적으로 선택한다.
 PYTHONPATH="$PWD/examples/plugins" tiny --plugin session_log:setup
 ```
 
